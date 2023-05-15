@@ -6,9 +6,11 @@ namespace Platformer
         private AnimationConfig _config;
         private SpriteAnimatorController _playerAnimator;
         private LevelObjectView _playerView;
+        private ContactPuller _contactPuller;
         private Transform _playerT;
-
+        private Rigidbody2D _rb;
         private float _xAxixInput;
+        private float _xVelocity = 0;
         private bool _isJump;
         private float _walkSpeed = 3f;
         private float _animationSpeed = 10f;
@@ -17,59 +19,63 @@ namespace Platformer
         private Vector3 _leftScale = new Vector3(-1, 1, 1);
         private Vector3 _rightScale = new Vector3(1, 1, 1);
         private bool _isMoving;
-        private float _jumpForce = 9f;
+        private float _jumpForce = 8f;
         private float _jumpTreshold = 1f;
-        private float _g = -9.8f;
-        private float _groundLevel = 0.5f;
         private float _yVelocity;
         public PlayerController(LevelObjectView player)
         {
+           
+            _playerView = player;
+            _playerT = player.transform;
+            _rb = _playerView._rb;
+
             _config = Resources.Load<AnimationConfig>("SpriteAnimCfg");
             _playerAnimator = new SpriteAnimatorController(_config);
             _playerAnimator.StartAnimation(player._spriteRendrerer, AnimState.Run, true, _animationSpeed);
-            _playerView = player;
-            _playerT = player.transform;
+            _contactPuller = new ContactPuller(_playerView._collider);
+
         }
         private void MoveTowards()
         {
-            _playerT.position+=Vector3.right*(Time.deltaTime * _walkSpeed * (_xAxixInput < 0 ? -1 : 1));
-            _playerT.localScale = _xAxixInput < 0? _leftScale:_rightScale;
+            _xVelocity += Time.fixedDeltaTime * _walkSpeed * (_xAxixInput < 0 ? -1 : 1);
+            _rb.velocity = new Vector2(_xVelocity, _yVelocity);
+            _playerT.localScale = _xAxixInput < 0 ? _leftScale : _rightScale;
         }
-        public bool IsGrounded()
-        {
-            return _playerT.position.y <= _groundLevel && _yVelocity <= 0;
-        }
+
         public void Update()
         {
             _playerAnimator.Update();
+            _contactPuller.Update();
             _xAxixInput = Input.GetAxis("Horizontal");
             _isJump = Input.GetAxis("Vertical") > 0;
+            _yVelocity = _rb.velocity.y;
             _isMoving = Mathf.Abs(_xAxixInput) > _movingThreshold;
-            if(_isMoving)
+
+            _playerAnimator.StartAnimation(_playerView._spriteRendrerer, _isMoving ? AnimState.Run : AnimState.Idle, true, _animationSpeed);
+
+            if (_isMoving)
             {
                 MoveTowards();
             }
-            if(IsGrounded())
+            else
             {
-                _playerAnimator.StartAnimation(_playerView._spriteRendrerer,_isMoving?AnimState.Run:AnimState.Idle,true,_animationSpeed);
+                _xVelocity = 0;
+                _rb.velocity = new Vector2(_xVelocity, _rb.velocity.y);
             }
-            if(_isJump && _yVelocity <= 0)
+
+            if (_contactPuller.IsGrounded)
             {
-                _yVelocity = _jumpForce;
-            }
-            else if(_yVelocity < 0)
-            {
-                _yVelocity = 0;
-                _playerT.position = new Vector3(_playerT.position.x, _groundLevel,_playerT.position.z);
+                if (_isJump && _yVelocity <= _jumpTreshold)
+                {
+                    _rb.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
+                }
             }
             else
             {
-                if(Mathf.Abs(_yVelocity) > _jumpTreshold)
+                if (Mathf.Abs(_yVelocity) > _jumpTreshold)
                 {
                     _playerAnimator.StartAnimation(_playerView._spriteRendrerer, AnimState.Jump, true, _animationSpeed);
                 }
-                _yVelocity += _g * Time.deltaTime;
-                _playerT.position += Vector3.up*(Time.deltaTime*_yVelocity);
             }
 
         }
