@@ -12,7 +12,7 @@ namespace Platformer
         private float _xAxixInput;
         private float _xVelocity = 0;
         private bool _isJump;
-        private float _walkSpeed = 3f;
+        private float _walkSpeed = 1.5f;
         private float _animationSpeed = 10f;
         private float _movingThreshold = 0.1f;
 
