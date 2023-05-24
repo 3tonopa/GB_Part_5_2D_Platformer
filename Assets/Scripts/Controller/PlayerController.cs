@@ -5,24 +5,25 @@ namespace Platformer
     {
         private AnimationConfig _config;
         private SpriteAnimatorController _playerAnimator;
-        private LevelObjectView _playerView;
+        private InteractiveObjectView _playerView;
         private ContactPuller _contactPuller;
         private Transform _playerT;
         private Rigidbody2D _rb;
+        
         private float _xAxixInput;
         private float _xVelocity = 0;
         private bool _isJump;
-        private float _walkSpeed = 1.5f;
+        private float _walkSpeed = 1.0f;
         private float _animationSpeed = 10f;
         private float _movingThreshold = 0.1f;
-
+        private int _health = 100;
         private Vector3 _leftScale = new Vector3(-1, 1, 1);
         private Vector3 _rightScale = new Vector3(1, 1, 1);
         private bool _isMoving;
         private float _jumpForce = 8f;
         private float _jumpTreshold = 1f;
         private float _yVelocity;
-        public PlayerController(LevelObjectView player)
+        public PlayerController(InteractiveObjectView player)
         {
            
             _playerView = player;
@@ -34,6 +35,11 @@ namespace Platformer
             _playerAnimator.StartAnimation(player._spriteRendrerer, AnimState.Run, true, _animationSpeed);
             _contactPuller = new ContactPuller(_playerView._collider);
 
+            _playerView.TakeDamage+= TakeBullet;
+        }
+        public void TakeBullet(BulletView bullet)
+        {
+            _health-=bullet.DamagePoint;
         }
         private void MoveTowards()
         {
@@ -44,6 +50,11 @@ namespace Platformer
 
         public void Update()
         {
+            if(_health <= 0)
+            {
+                _health = 0;
+                _playerView._spriteRendrerer.enabled = false;
+            }
             _playerAnimator.Update();
             _contactPuller.Update();
             _xAxixInput = Input.GetAxis("Horizontal");
